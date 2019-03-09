@@ -44,6 +44,15 @@ resource "random_id" "user-password" {
   byte_length = 8
 }
 
+resource "google_sql_database" "default" {
+  count     = "${var.master_instance_name == "" ? 1 : 0}"
+  name      = "${var.db_name}"
+  project   = "${var.project}"
+  instance  = "${google_sql_database_instance.default.name}"
+  charset   = "${var.db_charset}"
+  collation = "${var.db_collation}"
+}
+
 resource "google_sql_user" "default" {
   count    = "${var.master_instance_name == "" ? 1 : 0}"
   name     = "${var.user_name}"
