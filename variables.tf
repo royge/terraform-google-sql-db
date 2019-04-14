@@ -143,3 +143,8 @@ variable replica_configuration {
   type        = "list"
   default     = []
 }
+
+variable "additional_databases" {
+  description = "The list of databases for the instacne"
+  default     = []
+}

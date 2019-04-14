@@ -53,6 +53,16 @@ resource "google_sql_database" "default" {
   collation = "${var.db_collation}"
 }
 
+resource "google_sql_database" "additional_databases" {
+  count      = "${length(var.additional_databases)}"
+  project    = "${var.project}"
+  name       = "${lookup(var.additional_databases[count.index], "name")}"
+  charset    = "${lookup(var.additional_databases[count.index], "charset", "")}"
+  collation  = "${lookup(var.additional_databases[count.index], "collation", "")}"
+  instance   = "${google_sql_database_instance.default.name}"
+  depends_on = ["google_sql_database_instance.default"]
+}
+
 resource "google_sql_user" "default" {
   count    = "${var.master_instance_name == "" ? 1 : 0}"
   name     = "${var.user_name}"
