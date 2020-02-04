@@ -75,3 +75,17 @@ resource "google_sql_user" "default" {
     prevent_destroy = true
   }
 }
+
+resource "random_id" "user-passwords" {
+  count       = "${length(var.users)}"
+  byte_length = 8
+}
+
+resource "google_sql_user" "users" {
+  count    = "${length(var.users)}"
+  name     = "${lookup(var.users[count.index], "name")}"
+  project  = "${var.project}"
+  instance = "${google_sql_database_instance.default.name}"
+  host     = "${var.user_host}"
+  password = "${random_id.user-passwords[count.index].hex}"
+}

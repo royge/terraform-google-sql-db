@@ -148,3 +148,8 @@ variable "additional_databases" {
   description = "The list of databases for the instacne"
   default     = []
 }
+
+variable "users" {
+  description = "The list of database users"
+  default     = []
+}
