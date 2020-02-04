@@ -87,5 +87,5 @@ resource "google_sql_user" "users" {
   project  = "${var.project}"
   instance = "${google_sql_database_instance.default.name}"
   host     = "${var.user_host}"
-  password = "${random_id.user-passwords[count.index].hex}"
+  password = "${random_id.user-passwords.hex[count.index]}"
 }
