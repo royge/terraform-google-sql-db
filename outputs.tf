@@ -42,6 +42,6 @@ output generated_user_password {
 
 output generated_user_passwords {
   description = "The auto generated default user passwords"
-  value       = "${random_id.user-passwords.hex}"
+  value       = "${random_id.user-passwords.*.hex}"
   sensitive   = true
 }
