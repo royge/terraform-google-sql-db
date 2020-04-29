@@ -80,7 +80,7 @@ variable activation_policy {
 
 variable authorized_gae_applications {
   description = "A list of Google App Engine (GAE) project names that are allowed to access this instance."
-  type        = "list"
+  type        = list
   default     = []
 }
 
@@ -109,47 +109,14 @@ variable replication_type {
   default     = "SYNCHRONOUS"
 }
 
-variable database_flags {
-  description = "List of Cloud SQL flags that are applied to the database server"
-  default     = []
-}
-
-variable backup_configuration {
-  description = "The backup_configuration settings subblock for the database setings"
-  type        = "map"
-  default     = {}
-}
-
-variable ip_configuration {
-  description = "The ip_configuration settings subblock"
-  type        = "list"
-  default     = [{}]
-}
-
-variable location_preference {
-  description = "The location_preference settings subblock"
-  type        = "list"
-  default     = []
-}
-
-variable maintenance_window {
-  description = "The maintenance_window settings subblock"
-  type        = "list"
-  default     = []
-}
-
-variable replica_configuration {
-  description = "The optional replica_configuration block for the database instance"
-  type        = "list"
-  default     = []
-}
-
 variable "additional_databases" {
   description = "The list of databases for the instacne"
+  type        = list
   default     = []
 }
 
 variable "users" {
   description = "The list of database users"
+  type        = list
   default     = []
 }
