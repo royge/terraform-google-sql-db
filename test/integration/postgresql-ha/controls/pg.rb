@@ -1,10 +1,10 @@
-# Copyright 2018 Google LLC
+# Copyright 2019 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -59,7 +59,7 @@ describe google_sql_database_instance(project: project_id, database: basename) d
 end
 
 %i[a b c].each_with_index do |zone, index|
-  name = "#{basename}-replica#{index}"
+  name = "#{basename}-replica-test#{index}"
   describe google_sql_database_instance(project: project_id, database: name) do
     let(:expected_settings) {
       {
@@ -78,7 +78,6 @@ end
     let(:ip_configuration)        { settings[:ip_configuration] }
     let(:database_flags)          { settings[:database_flags] }
     let(:location_preference)     { settings[:location_preference] }
-    let(:maintenance_window)      { settings[:maintenance_window] }
     let(:user_labels)             { settings[:user_labels] }
 
     its(:backend_type)     { should eq 'SECOND_GEN' }
@@ -88,14 +87,14 @@ end
     its(:gce_zone)         { should eq "us-central1-#{zone}" }
 
     it { expect(settings).to include(expected_settings) }
-    it { expect(ip_configuration).to include(authorized_networks: [{kind: 'sql#aclEntry', name: "#{project_id}-cidr", value: authorized_network}], ipv4_enabled: true, require_ssl: true) }
+    it { expect(ip_configuration).to include(authorized_networks: [{kind: 'sql#aclEntry', name: "#{project_id}-cidr", value: authorized_network}], ipv4_enabled: true, require_ssl: false) }
     it { expect(database_flags).to include(name: "autovacuum", value: "off") }
     it { expect(location_preference).to include(kind: "sql#locationPreference", zone: "us-central1-#{zone}") }
-    it { expect(maintenance_window).to include(kind: "sql#maintenanceWindow", day: 1, hour: 22, update_track: "stable") }
     it { expect(user_labels).to include(bar: "baz") }
   end
 end
 
-describe google_sql_users(project: project_id, database: basename).where(user_name: /\Atftest\z/) do
+describe google_sql_users(project: project_id, database: basename).where(user_name: /\Atftest/) do
+  its(:count) { should be 3 }
   it { should exist }
 end

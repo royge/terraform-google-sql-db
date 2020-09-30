@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 Google LLC
+ * Copyright 2019 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,59 +15,78 @@
  */
 
 locals {
-  primary_zone       = "${var.zone}"
-  read_replica_zones = ["${compact(split(",", var.read_replica_zones))}"]
-
-  zone_mapping = {
-    enabled  = ["${local.read_replica_zones}"]
-    disabled = "${list(local.primary_zone)}"
+  replicas = {
+    for x in var.read_replicas : "${var.name}-replica${var.read_replica_name_suffix}${x.name}" => x
   }
-
-  zones_enabled = "${length(local.read_replica_zones) > 0}"
-  mod_by        = "${local.zones_enabled ? length(local.read_replica_zones) : 1}"
-
-  zones = "${local.zone_mapping["${local.zones_enabled ? "enabled" : "disabled"}"]}"
 }
 
 resource "google_sql_database_instance" "replicas" {
-  count                 = "${var.read_replica_size}"
-  project               = "${var.project_id}"
-  name                  = "${var.name}-replica${count.index}"
-  database_version      = "${var.database_version}"
-  region                = "${var.region}"
-  master_instance_name  = "${google_sql_database_instance.default.name}"
-  replica_configuration = ["${merge(var.read_replica_configuration, map("failover_target", false))}"]
+  for_each             = local.replicas
+  project              = var.project_id
+  name                 = "${local.master_instance_name}-replica${var.read_replica_name_suffix}${each.value.name}"
+  database_version     = var.database_version
+  region               = join("-", slice(split("-", lookup(each.value, "zone", var.zone)), 0, 2))
+  master_instance_name = google_sql_database_instance.default.name
+
+  replica_configuration {
+    failover_target = false
+  }
 
   settings {
-    tier                        = "${var.read_replica_tier}"
-    activation_policy           = "${var.read_replica_activation_policy}"
-    authorized_gae_applications = ["${var.authorized_gae_applications}"]
-    availability_type           = "${var.read_replica_availability_type}"
-    ip_configuration            = "${local.ip_configurations["${local.ip_configuration_enabled ? "enabled" : "disabled"}"]}"
+    tier              = lookup(each.value, "tier", var.tier)
+    activation_policy = "ALWAYS"
 
-    crash_safe_replication = "${var.read_replica_crash_safe_replication}"
-    disk_autoresize        = "${var.read_replica_disk_autoresize}"
-    disk_size              = "${var.read_replica_disk_size}"
-    disk_type              = "${var.read_replica_disk_type}"
-    pricing_plan           = "${var.read_replica_pricing_plan}"
-    replication_type       = "${var.read_replica_replication_type}"
-    user_labels            = "${var.read_replica_user_labels}"
-    database_flags         = ["${var.read_replica_database_flags}"]
+    dynamic "ip_configuration" {
+      for_each = [lookup(each.value, "ip_configuration", {})]
+      content {
+        ipv4_enabled    = lookup(ip_configuration.value, "ipv4_enabled", null)
+        private_network = lookup(ip_configuration.value, "private_network", null)
+        require_ssl     = lookup(ip_configuration.value, "require_ssl", null)
+
+        dynamic "authorized_networks" {
+          for_each = lookup(ip_configuration.value, "authorized_networks", [])
+          content {
+            expiration_time = lookup(authorized_networks.value, "expiration_time", null)
+            name            = lookup(authorized_networks.value, "name", null)
+            value           = lookup(authorized_networks.value, "value", null)
+          }
+        }
+      }
+    }
+
+    disk_autoresize = lookup(each.value, "disk_autoresize", var.disk_autoresize)
+    disk_size       = lookup(each.value, "disk_size", var.disk_size)
+    disk_type       = lookup(each.value, "disk_type", var.disk_type)
+    pricing_plan    = "PER_USE"
+    user_labels     = lookup(each.value, "user_labels", var.user_labels)
+
+    dynamic "database_flags" {
+      for_each = lookup(each.value, "database_flags", [])
+      content {
+        name  = lookup(database_flags.value, "name", null)
+        value = lookup(database_flags.value, "value", null)
+      }
+    }
 
     location_preference {
-      zone = "${length(local.zones) == 0 ? "" : "${var.region}-${local.zones[count.index % local.mod_by]}"}"
+      zone = lookup(each.value, "zone", var.zone)
     }
 
-    maintenance_window {
-      day          = "${var.read_replica_maintenance_window_day}"
-      hour         = "${var.read_replica_maintenance_window_hour}"
-      update_track = "${var.read_replica_maintenance_window_update_track}"
-    }
   }
 
-  depends_on = ["google_sql_database_instance.default"]
+  depends_on = [google_sql_database_instance.default]
 
   lifecycle {
-    ignore_changes = ["disk_size"]
+    ignore_changes = [
+      settings[0].disk_size,
+      settings[0].maintenance_window,
+    ]
+  }
+
+  timeouts {
+    create = var.create_timeout
+    update = var.update_timeout
+    delete = var.delete_timeout
   }
 }
+
